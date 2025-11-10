@@ -1,8 +1,30 @@
 html, body {
   margin: 0;
   padding: 0;
+  overflow: hidden; /* Nasconde le scrollbar */
 }
 
 canvas {
   display: block;
+}
+
+/* Stile per l'overlay informativo */
+#infoBox {
+  display: none; /* Nascosto di default */
+  position: absolute; /* Fluttua sopra la canvas */
+  top: 100px;
+  left: 100px;
+  padding: 15px;
+  background-color: rgba(0, 0, 0, 0.85); /* Sfondo scuro semi-trasparente */
+  color: white;
+  border-radius: 8px;
+  font-family: Arial, sans-serif;
+  max-width: 300px;
+  pointer-events: none; /* Permette di cliccare "attraverso" di esso */
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#infoBox strong {
+  color: #00bcd4; /* Colore per le etichette */
 }
