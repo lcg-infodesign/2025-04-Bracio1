@@ -1,9 +1,7 @@
-// === ATLANTE DEI VULCANI — VERSIONE OTTIMIZZATA ===
-// Miglior leggibilità, distribuzione, e stile dei glifi.
+// === ATLANTE DEI VULCANI — VERSIONE CON CLICK → NUOVA PAGINA ===
 
 let table;
 let volcanoes = [];
-let selectedVolcano = null;
 let zoomLevel = 1;
 let offsetX = 0;
 let offsetY = 0;
@@ -32,7 +30,8 @@ function setup() {
       lat: float(table.getString(r, 'Latitude')),
       lon: float(table.getString(r, 'Longitude')),
       elevation: float(table.getString(r, 'Elevation (m)')),
-      type: table.getString(r, 'TypeCategory'),
+      type: table.getString(r, 'Type'),
+      typeCategory: table.getString(r, 'TypeCategory'),
       status: table.getString(r, 'Status'),
       lastEruption: table.getString(r, 'Last Known Eruption')
     });
@@ -43,17 +42,15 @@ function draw() {
   background(8, 10, 25);
   translate(width / 2 + offsetX, height / 2 + offsetY);
   scale(zoomLevel);
+
   drawAtlasGrid();
 
-  // --- Evita sovrapposizioni eccessive ---
-  // Calcolo di un "raggio di influenza" per non disegnare troppi glifi vicini
   let minScreenDist = 10 / zoomLevel;
   let displayed = [];
 
   for (let v of volcanoes) {
     let pos = projectCoords(v.lat, v.lon);
 
-    // Controlla se è troppo vicino a un altro già disegnato
     let tooClose = false;
     for (let d of displayed) {
       if (dist(pos.x, pos.y, d.x, d.y) < minScreenDist) {
@@ -71,11 +68,10 @@ function draw() {
   }
 
   resetMatrix();
-  if (selectedVolcano) drawInfoCard(selectedVolcano);
   drawTitle();
 }
 
-// === Coordinate proiettate ===
+// === Coordinate ===
 function projectCoords(lat, lon) {
   let mapWidth = 6000;
   let mapHeight = 3000;
@@ -84,6 +80,7 @@ function projectCoords(lat, lon) {
   return createVector(x, y);
 }
 
+// === Griglia ===
 function drawAtlasGrid() {
   stroke(70, 120, 180, 90);
   strokeWeight(0.6 / zoomLevel);
@@ -107,28 +104,25 @@ function drawVolcano(v) {
   let size = map(abs(v.elevation), 0, 6000, 3, 11);
   scale(1 / zoomLevel);
 
-  // Ombra leggera sotto
   noStroke();
   fill(0, 0, 0, 80);
   ellipse(0, size * 0.5, size * 1.6, size * 0.4);
 
-  // Corpo
-  if (v.type.includes("Stratovolcano")) drawTruncatedPyramid(size);
-  else if (v.type.includes("Cone")) drawTruncatedCone(size);
-  else if (v.type.includes("Shield")) drawShield(size);
-  else if (v.type.includes("Submarine")) drawUnderwaterCone(size);
-  else if (v.type.includes("Crater")) drawCraterCluster(size);
-  else if (v.type.includes("Caldera")) drawCaldera(size);
-  else if (v.type.includes("Maars")) drawMaars(size);
-  else if (v.type.includes("Subglacial")) drawSubglacial(size);
+  if (v.typeCategory.includes("Stratovolcano")) drawTruncatedPyramid(size);
+  else if (v.typeCategory.includes("Cone")) drawTruncatedCone(size);
+  else if (v.typeCategory.includes("Shield")) drawShield(size);
+  else if (v.typeCategory.includes("Submarine")) drawUnderwaterCone(size);
+  else if (v.typeCategory.includes("Crater")) drawCraterCluster(size);
+  else if (v.typeCategory.includes("Caldera")) drawCaldera(size);
+  else if (v.typeCategory.includes("Maars")) drawMaars(size);
+  else if (v.typeCategory.includes("Subglacial")) drawSubglacial(size);
   else drawUnknown(size);
 
-  // Effetti sopra
   if (v.status.includes("Active")) emitSmoke(size);
-  if (v.type.includes("Submarine")) emitBubbles(size);
+  if (v.typeCategory.includes("Submarine")) emitBubbles(size);
 }
 
-// === Forme vulcaniche ===
+// === Forme ===
 function drawTruncatedPyramid(s) {
   fill(200, 100, 60);
   triangle(-s, s, s, s, 0, -s);
@@ -173,7 +167,7 @@ function drawUnknown(s) {
   ellipse(0, 0, s * 1.4);
 }
 
-// === Effetti animati ===
+// === Effetti ===
 function emitSmoke(s) {
   push();
   fill(230, 230, 230, 120);
@@ -183,7 +177,6 @@ function emitSmoke(s) {
   }
   pop();
 }
-
 function emitBubbles(s) {
   push();
   fill(160, 210, 255, 160);
@@ -194,12 +187,8 @@ function emitBubbles(s) {
   pop();
 }
 
-// === Interazioni ===
+// === Interazione click → nuova pagina ===
 function mousePressed() {
-  dragging = true;
-  prevMouseX = mouseX;
-  prevMouseY = mouseY;
-
   let clicked = null;
   let minDist = 12;
   let closest = Infinity;
@@ -209,12 +198,16 @@ function mousePressed() {
     let worldX = width / 2 + offsetX + pos.x * zoomLevel;
     let worldY = height / 2 + offsetY + pos.y * zoomLevel;
     let d = dist(mouseX, mouseY, worldX, worldY);
+
     if (d < minDist && d < closest) {
       closest = d;
       clicked = v;
     }
   }
-  selectedVolcano = clicked;
+
+  if (clicked) {
+    window.location.href = `focus.html?name=${encodeURIComponent(clicked.name)}`;
+  }
 }
 
 function mouseDragged() {
@@ -225,6 +218,7 @@ function mouseDragged() {
     prevMouseY = mouseY;
   }
 }
+
 function mouseReleased() { dragging = false; }
 function mouseWheel(event) {
   let zoomDelta = event.delta * 0.001;
@@ -232,29 +226,7 @@ function mouseWheel(event) {
   return false;
 }
 
-// === InfoCard & Titolo ===
-function drawInfoCard(v) {
-  fill(10, 10, 25, 230);
-  stroke(100, 150, 250, 150);
-  strokeWeight(1);
-  rect(30, 60, 330, 180, 12);
-
-  noStroke();
-  fill(255);
-  textSize(18);
-  textAlign(LEFT, TOP);
-  text(`🌋 ${v.name}`, 45, 75);
-
-  textSize(14);
-  fill(220);
-  text(`Paese: ${v.country}`, 45, 105);
-  text(`Località: ${v.location}`, 45, 125);
-  text(`Elevazione: ${v.elevation} m`, 45, 145);
-  text(`Stato: ${v.status}`, 45, 165);
-  text(`Ultima eruzione: ${v.lastEruption}`, 45, 185);
-  text(`Tipo: ${v.type}`, 45, 205);
-}
-
+// === Titolo ===
 function drawTitle() {
   noStroke();
   fill(255);
